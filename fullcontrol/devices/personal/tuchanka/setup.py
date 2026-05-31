@@ -120,14 +120,18 @@ def base_settings(
 
     These values drive FullControl's extrusion math and are used as defaults
     throughout the print. Override any of them to match your material/setup.
+
+    Note: nozzle_temp and bed_temp are intentionally excluded from the returned
+    dict. FullControl auto-injects M104/M109/M140/M190 commands for any temp
+    values passed here that aren't already in the start_gcode — with no tool
+    picked up, which causes a preheat error on the XL. Tuchanka's startup
+    sequence handles all heating itself.
     """
     return {
         'print_speed': print_speed,
         'travel_speed': travel_speed,
         'extrusion_width': extrusion_width,
         'extrusion_height': extrusion_height,
-        'nozzle_temp': nozzle_temp,
-        'bed_temp': bed_temp,
         'relative_e': True,
         'primer': 'no_primer',
     }
