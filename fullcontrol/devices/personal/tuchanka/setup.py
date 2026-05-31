@@ -234,6 +234,55 @@ def starting_steps(
     return steps
 
 
+def ending_steps(
+    travel_speed: float = 8000,
+    present_print: bool = True,
+    present_y: float = 365.0,
+) -> list:
+    """
+    Returns a list of FullControl steps for Tuchanka's shutdown sequence:
+    retract, park tool, cool all heaters, optionally present the print, disable steppers.
+
+    Args:
+        travel_speed:  Travel speed in mm/min. Defaults to 8000 (~133 mm/s).
+        present_print: If True, move the bed forward to present the finished print.
+                       Defaults to True.
+        present_y:     Y position (mm) to move to when presenting the print.
+                       Defaults to 365 (near the front of the XL bed).
+    """
+    f = int(travel_speed)
+    steps = []
+
+    steps.append(ManualGcode(text='\n; === Tuchanka shutdown (FullControl) ==='))
+
+    # Retract and lift
+    steps.append(ManualGcode(text='G1 E-2 F2400 ; retract'))
+    steps.append(ManualGcode(text='G91 ; relative positioning'))
+    steps.append(ManualGcode(text='G1 Z10 F720 ; lift nozzle'))
+    steps.append(ManualGcode(text='G90 ; absolute positioning'))
+
+    # Park tool and cool all heaters
+    steps.append(ManualGcode(text='P0 S1 L2 D0 ; park tool'))
+    steps.append(ManualGcode(text='M104 T0 S0 ; cool tool 0'))
+    steps.append(ManualGcode(text='M104 T1 S0 ; cool tool 1'))
+    steps.append(ManualGcode(text='M104 T2 S0 ; cool tool 2'))
+    steps.append(ManualGcode(text='M104 T3 S0 ; cool tool 3'))
+    steps.append(ManualGcode(text='M104 T4 S0 ; cool tool 4'))
+    steps.append(ManualGcode(text='M140 S0 ; cool bed'))
+    steps.append(ManualGcode(text='M107 ; fan off'))
+
+    # Present print
+    if present_print:
+        steps.append(ManualGcode(text=f'G1 Y{present_y} F{f} ; present print'))
+
+    # Disable steppers
+    steps.append(ManualGcode(text='M84 ; disable steppers'))
+
+    steps.append(ManualGcode(text='; === Tuchanka shutdown complete ===\n'))
+
+    return steps
+
+
 def _purge_tool(
     tool: int,
     first_layer_temp: float,
