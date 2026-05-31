@@ -32,7 +32,42 @@ Notes:
     - print_area is (x_min, y_min, x_max, y_max) in mm. Used for M555 and MBL probe width.
 """
 
+import json
+from pathlib import Path
+
 from fullcontrol.gcode import ManualGcode
+
+_PROFILES_DIR = Path(__file__).parent / 'profiles'
+
+
+def load_profile(name: str) -> dict:
+    """
+    Load a material profile by name from the profiles/ directory.
+
+    Example:
+        profile = load_profile('petg')
+        startup = starting_steps(**{k: profile[k] for k in
+                      ('first_layer_temps', 'idle_temps', 'mbl_temp',
+                       'bed_temp', 'travel_speed', 'zhop')})
+        gcode_controls = fc.GcodeControls(
+            printer_name='custom',
+            initialization_data=base_settings(
+                print_speed=profile['print_speed'],
+                extrusion_width=profile['extrusion_width'],
+                extrusion_height=profile['extrusion_height'],
+                nozzle_temp=profile['first_layer_temps'][0],
+                bed_temp=profile['bed_temp'],
+            ),
+        )
+    """
+    path = _PROFILES_DIR / f'{name}.json'
+    if not path.exists():
+        available = [p.stem for p in _PROFILES_DIR.glob('*.json')]
+        raise FileNotFoundError(
+            f"Profile '{name}' not found. Available profiles: {available}"
+        )
+    with path.open() as f:
+        return json.load(f)
 
 # Per-tool purge zone on the XL bed (fixed by physical layout).
 # Each entry: (start_x, direction, purge_y)
