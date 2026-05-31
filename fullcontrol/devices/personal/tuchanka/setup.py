@@ -226,6 +226,7 @@ def starting_steps(
     steps.append(ManualGcode(text=f'M217 Z{zhop:.1f} ; toolchange z hop'))
     steps.append(ManualGcode(text='G28 XY ; home XY'))
     steps.append(ManualGcode(text=f'G1 F{f}'))
+    steps.append(ManualGcode(text='P0 S1 L2 D0 ; park any currently loaded tool (no-op if none)'))
     steps.append(ManualGcode(text=f'T{initial_tool} S1 L0 D0 ; pick up initial tool'))
 
     # -------------------------------------------------------------------------
