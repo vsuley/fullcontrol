@@ -40,6 +40,31 @@ from fullcontrol.gcode import ManualGcode
 _PROFILES_DIR = Path(__file__).parent / 'profiles'
 
 
+def next_output_path(design_name: str, output_dir: str = '.') -> str:
+    """
+    Returns the next sequential output path for a design, e.g.:
+        'my_design_01', 'my_design_02', ...
+
+    Pass the result as save_as to GcodeControls (with include_date=False).
+    FullControl will append .gcode automatically.
+
+    Args:
+        design_name: Base name for the design (no path, no extension).
+        output_dir:  Directory to scan and write into. Defaults to current dir.
+    """
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    existing = list(output_dir.glob(f'{design_name}_*.gcode'))
+    numbers = []
+    for f in existing:
+        stem = f.stem  # e.g. 'my_design_03'
+        suffix = stem[len(design_name) + 1:]  # e.g. '03'
+        if suffix.isdigit():
+            numbers.append(int(suffix))
+    next_n = max(numbers, default=0) + 1
+    return str(output_dir / f'{design_name}_{next_n:02d}')
+
+
 def load_profile(name: str) -> dict:
     """
     Load a material profile by name from the profiles/ directory.
