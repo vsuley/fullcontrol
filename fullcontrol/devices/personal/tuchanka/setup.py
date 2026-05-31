@@ -211,27 +211,43 @@ def starting_steps(
         steps.append(ManualGcode(text=f'M862.1 T{t} P{nozzle_diameters[t]} ; nozzle diameter tool {t}'))
 
     # -------------------------------------------------------------------------
-    # 2. Thermal prep for MBL (reduced temp — not full print temp)
+    # 2. Zero out unused tools so firmware doesn't try to manage them
+    # -------------------------------------------------------------------------
+    unused_tools = [t for t in range(5) if t not in tools_used]
+    if unused_tools:
+        steps.append(ManualGcode(text=f'\n; --- disable unused tools ---'))
+        for t in unused_tools:
+            steps.append(ManualGcode(text=f'M104 T{t} S0 ; tool {t} not in use'))
+
+    # -------------------------------------------------------------------------
+    # 3. Home XY and pick up initial tool BEFORE heating
+    # -------------------------------------------------------------------------
+    steps.append(ManualGcode(text=f'\n; --- home XY & pick up initial tool ---'))
+    steps.append(ManualGcode(text=f'M217 Z{zhop:.1f} ; toolchange z hop'))
+    steps.append(ManualGcode(text='G28 XY ; home XY'))
+    steps.append(ManualGcode(text=f'G1 F{f}'))
+    steps.append(ManualGcode(text=f'T{initial_tool} S1 L0 D0 ; pick up initial tool'))
+
+    # -------------------------------------------------------------------------
+    # 4. Thermal prep for MBL — tool is now in hand
     # -------------------------------------------------------------------------
     steps.append(ManualGcode(text=f'\n; --- thermal prep for MBL ---'))
-    steps.append(ManualGcode(text=f'M217 Z{zhop:.1f} ; toolchange z hop'))
     steps.append(ManualGcode(text=f'M140 S{bed_temp} ; set bed temp (no wait)'))
     steps.append(ManualGcode(text='G0 Z5 ; Z clearance'))
     steps.append(ManualGcode(text=f'M109 T{initial_tool} S{mbl_temp} ; heat tool {initial_tool} to MBL temp'))
 
     # -------------------------------------------------------------------------
-    # 3. Home XY, pick up all used tools (dock verification), select initial tool
+    # 5. Dock verification — pick up remaining used tools and return to initial
     # -------------------------------------------------------------------------
-    steps.append(ManualGcode(text=f'\n; --- homing & dock verification ---'))
-    steps.append(ManualGcode(text='G28 XY ; home XY'))
-    steps.append(ManualGcode(text=f'G1 F{f}'))
-    for t in tools_used:
-        if t != initial_tool:
-            steps.append(ManualGcode(text=f'T{t} S1 L0 D0 ; pick tool {t} (dock verify)'))
-    steps.append(ManualGcode(text=f'T{initial_tool} S1 L0 D0 ; select initial tool'))
+    if len(tools_used) > 1:
+        steps.append(ManualGcode(text=f'\n; --- dock verification ---'))
+        for t in tools_used:
+            if t != initial_tool:
+                steps.append(ManualGcode(text=f'T{t} S1 L0 D0 ; pick tool {t} (dock verify)'))
+        steps.append(ManualGcode(text=f'T{initial_tool} S1 L0 D0 ; return to initial tool'))
 
     # -------------------------------------------------------------------------
-    # 4. Home Z, wait for bed, re-heat to MBL temp
+    # 6. Home Z, wait for bed, re-heat to MBL temp
     # -------------------------------------------------------------------------
     steps.append(ManualGcode(text=f'\n; --- home Z & wait for bed ---'))
     steps.append(ManualGcode(text='M84 E ; turn off E motor'))
@@ -244,7 +260,7 @@ def starting_steps(
     steps.append(ManualGcode(text=f'M109 T{initial_tool} S{mbl_temp} ; reheat to MBL temp'))
 
     # -------------------------------------------------------------------------
-    # 5. Nozzle cleanup (wipe on silicone brush before probing)
+    # 7. Nozzle cleanup (wipe on silicone brush before probing)
     # -------------------------------------------------------------------------
     if nozzle_clean:
         cleanup_x0 = min(x_min, x_max - 32)  # left edge of the 32mm brush zone
@@ -259,7 +275,7 @@ def starting_steps(
         steps.append(ManualGcode(text='M107 ; fan off'))
 
     # -------------------------------------------------------------------------
-    # 6. Mesh Bed Leveling
+    # 8. Mesh Bed Leveling
     # -------------------------------------------------------------------------
     steps.append(ManualGcode(text=f'\n; --- mesh bed leveling ---'))
     steps.append(ManualGcode(text='M84 E ; turn off E motor'))
@@ -273,14 +289,14 @@ def starting_steps(
     steps.append(ManualGcode(text='P0 S1 L1 D0 ; park tool'))
 
     # -------------------------------------------------------------------------
-    # 7. Start heating all tools to first-layer temp
+    # 9. Start heating all tools to first-layer temp
     # -------------------------------------------------------------------------
     steps.append(ManualGcode(text=f'\n; --- preheat all active tools ---'))
     for t in tools_used:
         steps.append(ManualGcode(text=f'M104 T{t} S{first_layer_temps[t]} ; preheat tool {t}'))
 
     # -------------------------------------------------------------------------
-    # 8. Purge lines — non-initial tools first, then initial tool
+    # 10. Purge lines — non-initial tools first, then initial tool
     # -------------------------------------------------------------------------
     purge_order = [t for t in tools_used if t != initial_tool] + [initial_tool]
 
