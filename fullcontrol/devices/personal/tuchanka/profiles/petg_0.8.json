@@ -1,0 +1,13 @@
+{
+  "material": "PETG",
+  "nozzle_diameter": 0.8,
+  "first_layer_temps": [235.0, 235.0, 235.0, 235.0, 235.0],
+  "idle_temps":        [70.0,  70.0,  70.0,  70.0,  70.0],
+  "mbl_temp":          175.0,
+  "bed_temp":          85.0,
+  "print_speed":       600,
+  "travel_speed":      8000,
+  "extrusion_width":   0.8,
+  "extrusion_height":  0.4,
+  "zhop":              2.0
+}
